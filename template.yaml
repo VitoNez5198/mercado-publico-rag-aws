@@ -1,0 +1,246 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Pipeline Serverless RAG y Auditoria de Riesgo para Licitaciones de Mercado Publico
+  (Ley N 19.886) bajo Free Tier en AWS con Amazon Bedrock Claude 3.5 Haiku.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Ambiente de ejecucion del stack.
+
+  BedrockModelId:
+    Type: String
+    Default: anthropic.claude-3-5-haiku-20241022-v1:0
+    Description: Identificador del modelo fundacional en Amazon Bedrock.
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Architectures:
+      - arm64
+    Timeout: 30
+    MemorySize: 512
+    Environment:
+      Variables:
+        APP_ENVIRONMENT: !Ref Environment
+        TABLE_NAME: !Ref TenderAnalysisTable
+        UPLOAD_BUCKET_NAME: !Sub "licitaciones-uploads-${AWS::AccountId}-${AWS::Region}"
+        BEDROCK_MODEL_ID: !Ref BedrockModelId
+        POWERTOOLS_SERVICE_NAME: mercado-publico-rag
+
+Resources:
+  # ============================================================================
+  # 1. Almacenamiento S3 para Pliegos PDF
+  # ============================================================================
+  S3BucketUploads:
+    Type: AWS::S3::Bucket
+    DependsOn: IngestionQueuePolicy
+    Properties:
+      BucketName: !Sub "licitaciones-uploads-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireUploadsAfter30Days
+            Status: Enabled
+            ExpirationInDays: 30
+      NotificationConfiguration:
+        QueueConfigurations:
+          - Event: s3:ObjectCreated:*
+            Queue: !GetAtt IngestionQueue.Arn
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: uploads/
+                  - Name: suffix
+                    Value: .pdf
+
+  # ============================================================================
+  # 2. Cola SQS y Dead-Letter Queue (DLQ) para Desacoplamiento Asincrono
+  # ============================================================================
+  IngestionDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "licitaciones-dlq-${Environment}"
+      MessageRetentionPeriod: 1209600 # 14 dias
+
+  IngestionQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "licitaciones-queue-${Environment}"
+      VisibilityTimeout: 360 # 2x timeout de Lambda (180s)
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt IngestionDLQ.Arn
+        maxReceiveCount: 3
+
+  IngestionQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref IngestionQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt IngestionQueue.Arn
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub "arn:aws:s3:::licitaciones-uploads-${AWS::AccountId}-${AWS::Region}"
+
+  # ============================================================================
+  # 3. Base de Datos DynamoDB para Auditoria y Trazabilidad
+  # ============================================================================
+  TenderAnalysisTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "TenderAnalysis-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: licitacion_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: licitacion_id
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  # ============================================================================
+  # 4. API Gateway HTTP API (v2)
+  # ============================================================================
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        AllowOrigins:
+          - '*'
+
+  # ============================================================================
+  # 5. Funciones Lambda
+  # ============================================================================
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "licitaciones-api-${Environment}"
+      CodeUri: src/
+      Handler: api.handler.lambda_handler
+      MemorySize: 512
+      Timeout: 15
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TenderAnalysisTable
+        - S3CrudPolicy:
+            BucketName: !Sub "licitaciones-uploads-${AWS::AccountId}-${AWS::Region}"
+      Events:
+        UploadUrl:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /licitaciones/upload-url
+            Method: POST
+        GetStatus:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /licitaciones/{id}/status
+            Method: GET
+        GetFactores:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /licitaciones/{id}/factores
+            Method: GET
+
+  IngestionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "licitaciones-ingestion-${Environment}"
+      CodeUri: src/
+      Handler: ingestion.handler.lambda_handler
+      MemorySize: 1024
+      Timeout: 180
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TenderAnalysisTable
+        - S3ReadPolicy:
+            BucketName: !Sub "licitaciones-uploads-${AWS::AccountId}-${AWS::Region}"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource:
+                - !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/*"
+      Events:
+        SqsTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt IngestionQueue.Arn
+            BatchSize: 1
+            ScalingConfig:
+              MaximumConcurrency: 2
+
+  # ============================================================================
+  # 6. FinOps y Control de Costos (AWS Budgets)
+  # ============================================================================
+  BudgetNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "licitaciones-budget-alerts-${Environment}"
+
+  FinOpsBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: !Sub "MercadoPublicoRagMonthlyBudget-${Environment}"
+        BudgetLimit:
+          Amount: 1
+          Unit: USD
+        TimeUnit: MONTHLY
+        BudgetType: COST
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 80
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref BudgetNotificationTopic
+
+Outputs:
+  HttpApiUrl:
+    Description: URL base del API Gateway HTTP
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+
+  UploadBucketName:
+    Description: Nombre del bucket S3 para carga de pliegos
+    Value: !Ref S3BucketUploads
+
+  TenderAnalysisTableName:
+    Description: Nombre de la tabla DynamoDB
+    Value: !Ref TenderAnalysisTable
+
+  IngestionQueueUrl:
+    Description: URL de la cola SQS de ingesta
+    Value: !Ref IngestionQueue
