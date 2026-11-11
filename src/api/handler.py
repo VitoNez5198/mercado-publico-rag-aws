@@ -209,3 +209,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         return handle_get_factores(licitacion_id)
 
     return _response(404, {"error": f"Ruta '{http_method} {raw_path}' no encontrada."})
+

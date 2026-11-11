@@ -158,3 +158,4 @@ def test_cors_preflight():
     response = lambda_handler(event, None)
     assert response["statusCode"] == 200
     assert response["headers"]["Access-Control-Allow-Origin"] == "*"
+
