@@ -167,8 +167,19 @@ class BedrockExtractor:
         cleaned = re.sub(r"^```(?:json)?\s*", "", text, flags=re.MULTILINE)
         cleaned = re.sub(r"```\s*$", "", cleaned, flags=re.MULTILINE).strip()
 
-        # Localizar el primer objeto JSON en caso de texto circundante
-        match = re.search(r"(\{.*\})", cleaned, re.DOTALL)
+        # Buscar el inicio del primer objeto JSON y decodificar solo hasta el cierre válido
+        start_idx = cleaned.find("{")
+        if start_idx != -1:
+            try:
+                decoder = json.JSONDecoder()
+                obj, _ = decoder.raw_decode(cleaned[start_idx:])
+                if isinstance(obj, dict):
+                    return obj
+            except json.JSONDecodeError:
+                logger.debug("raw_decode no pudo parsear JSON continuo, intentando regex fallback.")
+
+        # Fallback a regex no voraz
+        match = re.search(r"(\{.*?\})", cleaned, re.DOTALL)
         if match:
             cleaned = match.group(1)
 

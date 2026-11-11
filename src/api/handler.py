@@ -1,10 +1,21 @@
 import base64
 import json
 import logging
+import pathlib
+import sys
 import time
+import types
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any
+
+# Compatibilidad transparente con AWS Lambda (donde CodeUri es 'src/' y no existe el prefijo 'src.')
+if "src" not in sys.modules:
+    _src_dir = pathlib.Path(__file__).resolve().parent.parent
+    _src_pkg = types.ModuleType("src")
+    _src_pkg.__path__ = [str(_src_dir)]
+    sys.modules["src"] = _src_pkg
 
 import boto3
 from pydantic import ValidationError
@@ -33,12 +44,19 @@ CORS_HEADERS = {
 }
 
 
+def _decimal_default(obj: Any) -> Any:
+    """Serializa objetos Decimal provenientes de DynamoDB a tipos nativos int/float."""
+    if isinstance(obj, Decimal):
+        return int(obj) if obj % 1 == 0 else float(obj)
+    raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+
+
 def _response(status_code: int, body: Any) -> dict[str, Any]:
     """Genera una respuesta normalizada compatible con API Gateway HTTP/REST API."""
     return {
         "statusCode": status_code,
         "headers": CORS_HEADERS,
-        "body": json.dumps(body) if not isinstance(body, str) else body,
+        "body": json.dumps(body, default=_decimal_default) if not isinstance(body, str) else body,
     }
 
 

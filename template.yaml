@@ -13,8 +13,8 @@ Parameters:
 
   BedrockModelId:
     Type: String
-    Default: anthropic.claude-3-5-haiku-20241022-v1:0
-    Description: Identificador del modelo fundacional en Amazon Bedrock.
+    Default: us.anthropic.claude-haiku-4-5-20251001-v1:0
+    Description: Identificador del modelo fundacional o perfil de inferencia en Amazon Bedrock.
 
 Globals:
   Function:
@@ -189,8 +189,9 @@ Resources:
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
-              Resource:
-                - !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/*"
+                - aws-marketplace:ViewSubscriptions
+                - aws-marketplace:Subscribe
+              Resource: "*"
       Events:
         SqsTrigger:
           Type: SQS

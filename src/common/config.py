@@ -6,7 +6,7 @@ class Settings(BaseSettings):
 
     TABLE_NAME: str = "TenderAnalysis"
     UPLOAD_BUCKET_NAME: str = "licitaciones-uploads"
-    BEDROCK_MODEL_ID: str = "anthropic.claude-3-5-haiku-20241022-v1:0"
+    BEDROCK_MODEL_ID: str = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
     AWS_REGION: str = "us-east-1"
     PRESIGNED_URL_EXPIRATION_SECONDS: int = 900
     MAX_TIMEOUT_MARGIN_SECONDS: int = 165

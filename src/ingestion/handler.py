@@ -1,9 +1,19 @@
 import json
 import logging
+import pathlib
+import sys
 import time
+import types
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import unquote_plus
+
+# Compatibilidad transparente con AWS Lambda (donde CodeUri es 'src/' y no existe el prefijo 'src.')
+if "src" not in sys.modules:
+    _src_dir = pathlib.Path(__file__).resolve().parent.parent
+    _src_pkg = types.ModuleType("src")
+    _src_pkg.__path__ = [str(_src_dir)]
+    sys.modules["src"] = _src_pkg
 
 import boto3
 
