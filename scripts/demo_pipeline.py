@@ -160,4 +160,13 @@ def run_interactive_demo(pdf_path: str = "samples/pliego_ejemplo_chilecompra.pdf
 
 
 if __name__ == "__main__":
-    run_interactive_demo()
+    import argparse
+    parser = argparse.ArgumentParser(description="Demo interactiva del pipeline serverless")
+    parser.add_argument(
+        "--file",
+        "-f",
+        default="samples/pliego_ejemplo_chilecompra.pdf",
+        help="Ruta al archivo PDF a procesar en la demo",
+    )
+    args = parser.parse_args()
+    run_interactive_demo(args.file)
