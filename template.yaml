@@ -244,3 +244,4 @@ Outputs:
   IngestionQueueUrl:
     Description: URL de la cola SQS de ingesta
     Value: !Ref IngestionQueue
+

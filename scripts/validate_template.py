@@ -30,3 +30,4 @@ outputs = template.get("Outputs", {})
 print(f"Found {len(outputs)} Outputs:")
 for name in outputs.keys():
     print(f" - {name}")
+

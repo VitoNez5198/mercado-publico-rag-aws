@@ -44,3 +44,4 @@ REGLAS OBLIGATORIAS:
 3. Para cada factor identificado, DEBES proporcionar la cita textual EXACTA (`fragmento_exacto`) y el número de página correspondiente (`pagina_citada`).
 4. Responde ÚNICAMENTE en formato JSON válido que cumpla con el esquema requerido, sin comentarios ni explicaciones adicionales.
 """
+
