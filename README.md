@@ -409,7 +409,7 @@ sam deploy --guided
 
 ## 👤 Autor
 
-**Víctor Neira**  
+**Víctor Martínez**  
 *Estudiante de Ingeniería en Informática — AIEP (Chile)*  
 *AWS Certified Cloud Practitioner (AWS re/Start Graduate)*  
 - **GitHub:** [@VitoNez5198](https://github.com/VitoNez5198)
