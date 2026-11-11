@@ -1,5 +1,6 @@
-import yaml
 from pathlib import Path
+
+import yaml
 
 
 def cfn_constructor(loader, node):
@@ -28,6 +29,6 @@ for name, r in resources.items():
 
 outputs = template.get("Outputs", {})
 print(f"Found {len(outputs)} Outputs:")
-for name in outputs.keys():
+for name in outputs:
     print(f" - {name}")
 
