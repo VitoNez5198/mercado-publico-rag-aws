@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class FactorStatus(str, Enum):
@@ -60,6 +60,23 @@ class BaseFactor(BaseModel):
         default=None,
         description="Nota explicativa en caso de discrepancia en la cita o ambigüedad",
     )
+
+    @field_validator("pagina_citada", mode="before")
+    @classmethod
+    def _coerce_pagina_citada(cls, v: Any) -> int:
+        if v is None:
+            return 0
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return 0
+
+    @field_validator("fragmento_exacto", mode="before")
+    @classmethod
+    def _coerce_fragmento(cls, v: Any) -> str:
+        if v is None:
+            return ""
+        return str(v)
 
 
 class GarantiaFactor(BaseFactor):
