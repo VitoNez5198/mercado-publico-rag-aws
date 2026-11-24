@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="Arquitectura Serverless en AWS de Mercado Publico RAG">
+  <defs>
+    <style>
+      .diag-bg { fill: #111720; }
+      .diag-zone { fill: rgba(148, 163, 184, 0.03); stroke: rgba(148, 163, 184, 0.28); stroke-width: 1.1; stroke-dasharray: 4 3; }
+      .diag-zone-inner { fill: rgba(148, 163, 184, 0.02); stroke: rgba(148, 163, 184, 0.20); stroke-width: 1; stroke-dasharray: 3 3; }
+      .diag-zone-label { fill: #94a3b8; font-family: 'Fira Code', Consolas, monospace; font-size: 9px; font-weight: 600; }
+      .diag-box { fill: #17202c; stroke: rgba(148, 163, 184, 0.35); stroke-width: 1.3; }
+      .diag-box-accent { fill: rgba(91, 164, 245, 0.12); stroke: #5ba4f5; stroke-width: 1.3; }
+      .diag-box-ok { fill: rgba(52, 211, 153, 0.10); stroke: #34d399; stroke-width: 1.3; }
+      .diag-label { fill: #f0f6fc; font-family: 'Fira Code', Consolas, monospace; font-size: 10.5px; font-weight: 600; text-anchor: middle; }
+      .diag-sub { fill: #94a3b8; font-family: 'Fira Code', Consolas, monospace; font-size: 8.5px; text-anchor: middle; }
+      .diag-edge { fill: #94a3b8; font-family: 'Fira Code', Consolas, monospace; font-size: 8px; }
+      .diag-line { fill: none; stroke: #94a3b8; stroke-width: 1.25; }
+      .diag-line-dashed { fill: none; stroke: #5ba4f5; stroke-width: 1.25; stroke-dasharray: 4 3; }
+      .diag-arrow { fill: #94a3b8; }
+      .diag-arrow-accent { fill: #5ba4f5; }
+    </style>
+    <marker id="arr-mp" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="diag-arrow" d="M 0 1 L 10 5 L 0 9 z" />
+    </marker>
+    <marker id="arr-mp-acc" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="diag-arrow-accent" d="M 0 1 L 10 5 L 0 9 z" />
+    </marker>
+  </defs>
+
+  <rect class="diag-bg" x="0" y="0" width="640" height="360" rx="8" />
+
+  <!-- Cliente externo -->
+  <rect class="diag-box" x="16" y="72" width="90" height="50" rx="6" />
+  <text class="diag-label" x="61" y="94">Cliente</text>
+  <text class="diag-sub" x="61" y="109">PYME / REST</text>
+
+  <!-- Frontera AWS Cloud -->
+  <rect class="diag-zone" x="126" y="16" width="498" height="328" rx="8" />
+  <text class="diag-zone-label" x="138" y="32">AWS Cloud (AWS SAM · Serverless · Free Tier)</text>
+
+  <!-- Subzona 1: API & Ingesta -->
+  <rect class="diag-zone-inner" x="140" y="44" width="144" height="284" rx="6" />
+  <text class="diag-zone-label" x="148" y="59">API &amp; Ingesta</text>
+
+  <rect class="diag-box" x="150" y="72" width="124" height="50" rx="6" />
+  <text class="diag-label" x="212" y="94">HTTP API + ApiFn</text>
+  <text class="diag-sub" x="212" y="109">Presigned · GET</text>
+
+  <rect class="diag-box" x="150" y="154" width="124" height="50" rx="6" />
+  <text class="diag-label" x="212" y="176">Amazon S3</text>
+  <text class="diag-sub" x="212" y="191">SSE-S3 · TTL 30d</text>
+
+  <rect class="diag-box" x="150" y="246" width="124" height="54" rx="6" />
+  <text class="diag-label" x="212" y="270">SQS + DLQ</text>
+  <text class="diag-sub" x="212" y="285">Batch 1 · 3 retries</text>
+
+  <!-- Subzona 2: Computo & IA -->
+  <rect class="diag-zone-inner" x="298" y="130" width="156" height="198" rx="6" />
+  <text class="diag-zone-label" x="306" y="145">Cómputo &amp; IA</text>
+
+  <rect class="diag-box-accent" x="308" y="154" width="136" height="54" rx="6" />
+  <text class="diag-label" x="376" y="177">Ingestion Lambda</text>
+  <text class="diag-sub" x="376" y="192">Py 3.12 ARM64 · NFKD</text>
+
+  <rect class="diag-box-accent" x="308" y="246" width="136" height="54" rx="6" />
+  <text class="diag-label" x="376" y="269">Amazon Bedrock</text>
+  <text class="diag-sub" x="376" y="284">Claude Haiku 4.5</text>
+
+  <!-- Subzona 3: Persistencia & FinOps -->
+  <rect class="diag-zone-inner" x="468" y="44" width="144" height="284" rx="6" />
+  <text class="diag-zone-label" x="476" y="59">Datos &amp; FinOps</text>
+
+  <rect class="diag-box" x="478" y="72" width="124" height="54" rx="6" />
+  <text class="diag-label" x="540" y="95">DynamoDB</text>
+  <text class="diag-sub" x="540" y="110">On-Demand · TTL 30d</text>
+
+  <rect class="diag-box-ok" x="478" y="246" width="124" height="54" rx="6" />
+  <text class="diag-label" x="540" y="269">AWS Budgets</text>
+  <text class="diag-sub" x="540" y="284">$1/mes · SNS 80%</text>
+
+  <!-- Flujos principales (solidos) -->
+  <line class="diag-line" x1="106" y1="97" x2="146" y2="97" marker-end="url(#arr-mp)" />
+
+  <path class="diag-line" d="M 61 122 L 61 179 L 146 179" marker-end="url(#arr-mp)" />
+  <text class="diag-edge" x="67" y="172">PUT PDF</text>
+
+  <line class="diag-line" x1="274" y1="97" x2="474" y2="97" marker-end="url(#arr-mp)" />
+  <text class="diag-edge" x="336" y="90">GET / PUT estado</text>
+
+  <line class="diag-line" x1="212" y1="204" x2="212" y2="242" marker-end="url(#arr-mp)" />
+  <text class="diag-edge" x="218" y="227">*.pdf</text>
+
+  <path class="diag-line" d="M 274 273 L 291 273 L 291 193 L 304 193" marker-end="url(#arr-mp)" />
+
+  <path class="diag-line" d="M 444 181 L 540 181 L 540 130" marker-end="url(#arr-mp)" />
+  <text class="diag-edge" x="456" y="174">Factores + citas</text>
+
+  <!-- Flujos secundarios / inferencia / control (discontinuos) -->
+  <line class="diag-line-dashed" x1="274" y1="168" x2="304" y2="168" marker-end="url(#arr-mp-acc)" />
+
+  <line class="diag-line-dashed" x1="376" y1="208" x2="376" y2="242" marker-end="url(#arr-mp-acc)" />
+  <text class="diag-edge" x="383" y="229">converse()</text>
+
+  <line class="diag-line-dashed" x1="444" y1="273" x2="474" y2="273" marker-end="url(#arr-mp-acc)" />
+</svg>
