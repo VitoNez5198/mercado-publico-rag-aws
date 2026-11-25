@@ -41,7 +41,16 @@ Este proyecto implementa una solución de **Inteligencia Artificial Generativa y
 
 El pipeline adopta un patrón **Event-Driven Serverless** desacoplado, asíncrono y resiliente a límites de concurrencia, definido en [template.yaml](template.yaml):
 
-![Arquitectura Serverless AWS de Mercado Público RAG](docs/architecture.svg)
+![Arquitectura Serverless AWS de Mercado Público RAG](docs/architecture.png)
+
+### Flujo de Trabajo y Rol de cada Servicio
+
+1. **Solicitud de carga (`Amazon API Gateway` + `AWS Lambda API`):** El cliente solicita una URL de carga a través de API Gateway (HTTP API v2). La función Lambda API registra el estado inicial en DynamoDB y genera una URL prefirmada temporal de S3 (válida por 15 minutos).
+2. **Carga directa del pliego (`Amazon S3`):** El cliente sube el archivo PDF directamente al bucket privado de S3 sin pasar el archivo por la API. El bucket cuenta con cifrado en reposo (SSE-S3) y eliminación automática a los 30 días.
+3. **Desacoplamiento asíncrono (`Amazon SQS` + `DLQ`):** Al cargarse un PDF en S3, se dispara un evento hacia la cola SQS, evitando sobrecargar el procesamiento ante picos de carga. Si un documento falla tras 3 reintentos, se deriva a la Dead-Letter Queue (DLQ) para revisión sin perder el evento.
+4. **Extracción y auditoría con IA (`AWS Lambda Worker` + `Amazon Bedrock`):** SQS invoca a la función Worker (Python 3.12 en ARM64), que lee el PDF desde S3, extrae las páginas relevantes y consulta a Amazon Bedrock (Claude Haiku 4.5) para identificar los 4 factores de riesgo. Luego verifica de forma determinista que cada cita exista literalmente en el documento.
+5. **Persistencia y consulta (`Amazon DynamoDB`):** El Worker guarda el resultado auditado y el estado `READY` en DynamoDB (modo On-Demand con expiración TTL de 30 días). El cliente consulta el progreso y los factores verificados a través de API Gateway y la Lambda API.
+6. **Control de costos (`AWS Budgets` + `Amazon SNS`):** Un presupuesto mensual de $1.00 USD monitorea el consumo de la cuenta y envía alertas vía SNS al superar el 80%.
 
 ---
 
@@ -266,7 +275,8 @@ curl -X GET https://{api-id}.execute-api.us-east-1.amazonaws.com/licitaciones/LI
 ```text
 mercado-publico-rag-aws/
 ├── docs/
-│   ├── architecture.svg                                 # Diagrama de arquitectura serverless AWS
+│   ├── architecture.drawio                              # Fuente editable del diagrama (Draw.io / AWS4)
+│   ├── architecture.png                                 # Diagrama de arquitectura serverless AWS
 │   └── designs/
 │       ├── pipeline-serverless-rag-mercado-publico.md   # Documento de diseño técnico
 │       └── SITEMAP.md                                   # Índice de especificaciones
